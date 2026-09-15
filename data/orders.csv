@@ -1,0 +1,5 @@
+order_id,customer_id,amount,status
+1001,1,425.00,completed
+1002,2,710.50,completed
+1003,3,260.00,cancelled
+1004,4,845.00,completed
