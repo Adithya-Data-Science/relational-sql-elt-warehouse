@@ -1,0 +1,64 @@
+name: Cross-database ELT validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  sqlite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-cross-db.txt
+      - run: python db_smoke_test.py
+
+  postgresql:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: elt
+          POSTGRES_PASSWORD: elt
+          POSTGRES_DB: warehouse
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U elt -d warehouse"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-cross-db.txt
+      - run: python db_smoke_test.py
+        env:
+          DATABASE_URL: postgresql+psycopg://elt:elt@localhost:5432/warehouse
+
+  mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: warehouse
+          MYSQL_USER: elt
+          MYSQL_PASSWORD: elt
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -uelt -pelt"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-cross-db.txt
+      - run: python db_smoke_test.py
+        env:
+          DATABASE_URL: mysql+pymysql://elt:elt@127.0.0.1:3306/warehouse
